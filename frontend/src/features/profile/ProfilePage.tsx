@@ -1,13 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import { Wallet, TrendingUp, TrendingDown, Settings, Grid3x3, Activity } from 'lucide-react';
 import { useState } from 'react';
-import NFTCard from '../components/NFTCard';
-import { mockNFTs } from '../data/mockData';
+import NFTCard from '../../components/NFTCard';
+import { mockNFTs } from '../../data/mockData';
 
-interface ProfilePageProps {
-  onNavigateToNFT: (nftId: string) => void;
-}
-
-export default function ProfilePage({ onNavigateToNFT }: ProfilePageProps) {
+export default function ProfilePage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'owned' | 'activity' | 'favorites'>('owned');
 
   const ownedNFTs = mockNFTs.slice(0, 6);
@@ -122,14 +120,17 @@ export default function ProfilePage({ onNavigateToNFT }: ProfilePageProps) {
                     <div className="text-6xl mb-4">🖼️</div>
                     <h3 className="text-2xl font-bold text-white mb-2">No NFTs Yet</h3>
                     <p className="text-slate-400 mb-6">Start your collection by exploring the marketplace</p>
-                    <button className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all">
+                    <button
+                      onClick={() => navigate('/explore')}
+                      className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all"
+                    >
                       Explore NFTs
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {ownedNFTs.map((nft) => (
-                      <NFTCard key={nft.id} nft={nft} onClick={() => onNavigateToNFT(nft.id)} />
+                      <NFTCard key={nft.id} nft={nft} onClick={() => navigate(`/nft/${nft.id}`)} />
                     ))}
                   </div>
                 )}
@@ -191,7 +192,7 @@ export default function ProfilePage({ onNavigateToNFT }: ProfilePageProps) {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {favoriteNFTs.map((nft) => (
-                      <NFTCard key={nft.id} nft={nft} onClick={() => onNavigateToNFT(nft.id)} />
+                      <NFTCard key={nft.id} nft={nft} onClick={() => navigate(`/nft/${nft.id}`)} />
                     ))}
                   </div>
                 )}

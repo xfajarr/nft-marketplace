@@ -1,14 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Sparkles, Flame, ArrowRight } from 'lucide-react';
-import NFTCard from '../components/NFTCard';
-import { mockNFTs } from '../data/mockData';
+import NFTCard from '../../components/NFTCard';
+import { mockNFTs } from '../../data/mockData';
 
-interface HomePageProps {
-  onNavigateToNFT: (nftId: string) => void;
-  onNavigateToExplore: () => void;
-  onNavigateToCollection?: (collectionId: string) => void;
-}
-
-export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavigateToCollection }: HomePageProps) {
+export default function HomePage() {
+  const navigate = useNavigate();
   const featuredNFT = mockNFTs[0];
   const trendingNFTs = mockNFTs.slice(1, 4);
   const popularNFTs = mockNFTs.slice(4, 10);
@@ -33,7 +29,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
               </p>
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={onNavigateToExplore}
+                  onClick={() => navigate('/explore')}
                   className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/25"
                 >
                   Explore Marketplace
@@ -58,7 +54,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
               </div>
             </div>
 
-            <div className="relative group cursor-pointer" onClick={() => onNavigateToNFT(featuredNFT.id)}>
+            <div className="relative group cursor-pointer" onClick={() => navigate(`/nft/${featuredNFT.id}`)}>
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity" />
               <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50 group-hover:border-cyan-500/50 transition-all">
                 <img
@@ -72,9 +68,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onNavigateToCollection) {
-                            onNavigateToCollection('collection-1');
-                          }
+                          navigate('/collection/collection-1');
                         }}
                         className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                       >
@@ -105,7 +99,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
               <h2 className="text-3xl font-bold text-white">Trending Now</h2>
             </div>
             <button
-              onClick={onNavigateToExplore}
+              onClick={() => navigate('/explore')}
               className="flex items-center space-x-2 text-cyan-400 hover:text-cyan-300 transition-colors group"
             >
               <span className="font-medium">View All</span>
@@ -114,7 +108,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {trendingNFTs.map((nft) => (
-              <NFTCard key={nft.id} nft={nft} onClick={() => onNavigateToNFT(nft.id)} />
+              <NFTCard key={nft.id} nft={nft} onClick={() => navigate(`/nft/${nft.id}`)} />
             ))}
           </div>
         </div>
@@ -128,7 +122,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
               <h2 className="text-3xl font-bold text-white">Popular NFTs</h2>
             </div>
             <button
-              onClick={onNavigateToExplore}
+              onClick={() => navigate('/explore')}
               className="flex items-center space-x-2 text-cyan-400 hover:text-cyan-300 transition-colors group"
             >
               <span className="font-medium">View All</span>
@@ -137,7 +131,7 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavig
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {popularNFTs.map((nft) => (
-              <NFTCard key={nft.id} nft={nft} onClick={() => onNavigateToNFT(nft.id)} />
+              <NFTCard key={nft.id} nft={nft} onClick={() => navigate(`/nft/${nft.id}`)} />
             ))}
           </div>
         </div>

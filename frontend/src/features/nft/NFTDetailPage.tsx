@@ -1,13 +1,11 @@
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Share2, MoreVertical, TrendingUp, Clock, Eye, Award } from 'lucide-react';
 import { useState } from 'react';
-import { mockNFTs } from '../data/mockData';
+import { mockNFTs } from '../../data/mockData';
 
-interface NFTDetailPageProps {
-  nftId: string | null;
-  onBack: () => void;
-}
-
-export default function NFTDetailPage({ nftId, onBack }: NFTDetailPageProps) {
+export default function NFTDetailPage() {
+  const { nftId } = useParams<{ nftId: string }>();
+  const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'offers'>('details');
 
@@ -24,7 +22,7 @@ export default function NFTDetailPage({ nftId, onBack }: NFTDetailPageProps) {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <button
-          onClick={onBack}
+          onClick={() => navigate('/explore')}
           className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors mb-8 group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -232,6 +230,7 @@ export default function NFTDetailPage({ nftId, onBack }: NFTDetailPageProps) {
               {similarNFTs.map((similarNFT) => (
                 <div
                   key={similarNFT.id}
+                  onClick={() => navigate(`/nft/${similarNFT.id}`)}
                   className="group relative bg-slate-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-slate-700/50 hover:border-cyan-500/50 transition-all cursor-pointer transform hover:scale-105"
                 >
                   <div className="relative aspect-square overflow-hidden">
