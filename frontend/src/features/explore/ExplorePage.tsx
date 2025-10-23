@@ -1,23 +1,33 @@
 import { useState } from 'react';
 import { Filter, SlidersHorizontal, Grid3x3, List, Loader2 } from 'lucide-react';
 import { useQueryAllEditionCollections, useQueryEditionCollection } from './hooks/useQueryEditionCollections';
+import { useQueryAllDropsNFTs, useQueryDropsNFT } from './hooks/useQueryDropsNFTs';
 import EditionCollectionCard from './components/EditionCollectionCard';
+import DropsNFTCard from './components/DropsNFTCard';
 
 export default function ExplorePage() {
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState<'edition' | 'drops'>('edition');
 
-  // Fetch collection IDs from events
-  const { data: collectionIds, isLoading, error } = useQueryAllEditionCollections();
+  // Fetch Edition collection IDs from events
+  const { data: editionCollectionIds, isLoading: isLoadingEditions, error: editionError } = useQueryAllEditionCollections();
+
+  // Fetch Drops NFT IDs from events
+  const { data: dropsNFTIds, isLoading: isLoadingDrops, error: dropsError } = useQueryAllDropsNFTs();
+
+  const isLoading = activeTab === 'edition' ? isLoadingEditions : isLoadingDrops;
+  const error = activeTab === 'edition' ? editionError : dropsError;
+  const itemIds = activeTab === 'edition' ? editionCollectionIds : dropsNFTIds;
 
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Explore Collections</h1>
+            <h1 className="text-4xl font-bold text-white mb-2">Explore NFTs</h1>
             <p className="text-slate-400">
-              Discover {collectionIds?.length || 0} edition collections on Sui
+              Discover {itemIds?.length || 0} {activeTab === 'edition' ? 'edition collections' : 'drops NFTs'} on Sui
             </p>
           </div>
 
@@ -47,6 +57,32 @@ export default function ExplorePage() {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="mb-6">
+          <div className="flex space-x-2 bg-slate-800/50 border border-slate-700 rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setActiveTab('edition')}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'edition'
+                  ? 'bg-cyan-500 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Edition Collections ({editionCollectionIds?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveTab('drops')}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                activeTab === 'drops'
+                  ? 'bg-cyan-500 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Drops NFTs ({dropsNFTIds?.length || 0})
+            </button>
+          </div>
+        </div>
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -64,24 +100,26 @@ export default function ExplorePage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && !error && (!collectionIds || collectionIds.length === 0) && (
+        {!isLoading && !error && (!itemIds || itemIds.length === 0) && (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🎨</div>
-            <h3 className="text-2xl font-bold text-white mb-2">No Collections Yet</h3>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              No {activeTab === 'edition' ? 'Collections' : 'NFTs'} Yet
+            </h3>
             <p className="text-slate-400 mb-6">
-              Be the first to create an edition collection!
+              Be the first to create {activeTab === 'edition' ? 'an edition collection' : 'a drops NFT'}!
             </p>
             <a
               href="/launch"
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all"
             >
-              Create Collection
+              Create {activeTab === 'edition' ? 'Collection' : 'NFT'}
             </a>
           </div>
         )}
 
-        {/* Collections Grid */}
-        {!isLoading && !error && collectionIds && collectionIds.length > 0 && (
+        {/* Items Grid */}
+        {!isLoading && !error && itemIds && itemIds.length > 0 && (
           <div
             className={`grid gap-6 ${
               viewMode === 'grid'
@@ -89,9 +127,10 @@ export default function ExplorePage() {
                 : 'grid-cols-1'
             }`}
           >
-            {collectionIds.map((collectionId) => (
-              <CollectionCardWrapper key={collectionId} collectionId={collectionId} />
-            ))}
+            {activeTab === 'edition' &&
+              itemIds.map((id) => <EditionCollectionCardWrapper key={id} collectionId={id} />)}
+            {activeTab === 'drops' &&
+              itemIds.map((id) => <DropsNFTCardWrapper key={id} nftId={id} />)}
           </div>
         )}
       </div>
@@ -100,9 +139,9 @@ export default function ExplorePage() {
 }
 
 /**
- * Wrapper component to fetch individual collection data
+ * Wrapper component to fetch individual Edition collection data
  */
-function CollectionCardWrapper({ collectionId }: { collectionId: string }) {
+function EditionCollectionCardWrapper({ collectionId }: { collectionId: string }) {
   const { data: collection, isLoading, error } = useQueryEditionCollection(collectionId);
 
   if (isLoading) {
@@ -120,4 +159,29 @@ function CollectionCardWrapper({ collectionId }: { collectionId: string }) {
   }
 
   return <EditionCollectionCard collection={collection} />;
+}
+
+/**
+ * Wrapper component to fetch individual Drops NFT data
+ */
+function DropsNFTCardWrapper({ nftId }: { nftId: string }) {
+  const { data: nft, isLoading, error } = useQueryDropsNFT(nftId);
+
+  if (isLoading) {
+    return (
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-700/50 animate-pulse">
+        <div className="aspect-square bg-slate-700" />
+        <div className="p-4">
+          <div className="h-4 bg-slate-700 rounded mb-2" />
+          <div className="h-4 bg-slate-700 rounded w-2/3" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !nft) {
+    return null; // Skip NFTs that failed to load
+  }
+
+  return <DropsNFTCard nft={nft} />;
 }
