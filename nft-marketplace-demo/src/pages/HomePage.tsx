@@ -5,9 +5,10 @@ import { mockNFTs } from '../data/mockData';
 interface HomePageProps {
   onNavigateToNFT: (nftId: string) => void;
   onNavigateToExplore: () => void;
+  onNavigateToCollection?: (collectionId: string) => void;
 }
 
-export default function HomePage({ onNavigateToNFT, onNavigateToExplore }: HomePageProps) {
+export default function HomePage({ onNavigateToNFT, onNavigateToExplore, onNavigateToCollection }: HomePageProps) {
   const featuredNFT = mockNFTs[0];
   const trendingNFTs = mockNFTs.slice(1, 4);
   const popularNFTs = mockNFTs.slice(4, 10);
@@ -68,7 +69,17 @@ export default function HomePage({ onNavigateToNFT, onNavigateToExplore }: HomeP
                 <div className="p-6 space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="text-sm text-slate-400">{featuredNFT.collection}</div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onNavigateToCollection) {
+                            onNavigateToCollection('collection-1');
+                          }
+                        }}
+                        className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        {featuredNFT.collection}
+                      </button>
                       <div className="text-2xl font-bold text-white mt-1">{featuredNFT.title}</div>
                     </div>
                     <div className="text-right">

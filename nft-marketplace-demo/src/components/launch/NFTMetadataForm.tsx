@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { ArrowLeft, Plus, X, Upload, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Plus, X, HelpCircle } from 'lucide-react';
 import { Collection, LaunchType, NFTMetadata } from '../../pages/LaunchPage';
+import Dropdown from '../ui/Dropdown';
+import MediaInput from '../ui/MediaInput';
 
 interface NFTMetadataFormProps {
   launchType: LaunchType;
@@ -14,6 +16,7 @@ export default function NFTMetadataForm({ launchType, collection, onSubmit, onBa
     edition_name: '',
     edition_description: '',
     edition_size: launchType === 'edition' ? 100 : 1000,
+    edition_size_type: 'fixed',
     image_urls: [''],
     attributes: [{ trait_type: '', value: '' }],
   });
@@ -26,7 +29,7 @@ export default function NFTMetadataForm({ launchType, collection, onSubmit, onBa
       collection_id: collection.id || '',
       edition_name: formData.edition_name,
       edition_description: formData.edition_description,
-      edition_size: formData.edition_size,
+      edition_size: formData.edition_size_type === 'unlimited' ? 999999 : formData.edition_size,
       image_urls: formData.image_urls.filter(url => url.trim() !== ''),
       attributes: formData.attributes.filter(attr => attr.trait_type && attr.value),
     };
@@ -82,6 +85,21 @@ export default function NFTMetadataForm({ launchType, collection, onSubmit, onBa
       : 'Upload all unique images for your collection. Each image represents a different NFT in your drop.',
     attributes: 'Define traits and attributes for your NFT(s). These are displayed as properties and can be used for filtering.',
   };
+
+  const editionSizeOptions = [
+    { value: 1, label: '1/1', description: 'Unique single edition' },
+    { value: 'unlimited', label: 'Unlimited', description: 'No limit on editions' },
+    { value: 'fixed', label: 'Fixed', description: 'Set custom edition size' },
+  ];
+
+  const commonEditionSizes = [
+    { value: 10, label: '10', description: 'Small collection' },
+    { value: 25, label: '25', description: 'Medium collection' },
+    { value: 50, label: '50', description: 'Standard collection' },
+    { value: 100, label: '100', description: 'Large collection' },
+    { value: 500, label: '500', description: 'Extra large collection' },
+    { value: 1000, label: '1000', description: 'Mass collection' },
+  ];
 
   const Tooltip = ({ field, text }: { field: string; text: string }) => (
     <div className="relative inline-block">
@@ -161,14 +179,36 @@ export default function NFTMetadataForm({ launchType, collection, onSubmit, onBa
             {launchType === 'edition' ? 'Edition Size (Total Supply)' : 'Collection Size (Total Supply)'} *
             <Tooltip field="edition_size" text={tooltips.edition_size} />
           </label>
-          <input
-            type="number"
-            required
-            min="1"
-            value={formData.edition_size}
-            onChange={(e) => setFormData({ ...formData, edition_size: parseInt(e.target.value) })}
-            className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+          <Dropdown
+            value={formData.edition_size_type}
+            onChange={(value) => setFormData({ ...formData, edition_size_type: value as string })}
+            options={editionSizeOptions}
+            className="mb-3"
           />
+          
+          {formData.edition_size_type === 'fixed' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Set Edition Size
+              </label>
+              <Dropdown
+                value={formData.edition_size}
+                onChange={(value) => setFormData({ ...formData, edition_size: value as number })}
+                options={commonEditionSizes}
+                className="mb-2"
+              />
+              <input
+                type="number"
+                required
+                min="1"
+                value={typeof formData.edition_size === 'number' ? formData.edition_size : 100}
+                onChange={(e) => setFormData({ ...formData, edition_size: parseInt(e.target.value) || 1 })}
+                placeholder="Enter custom edition size"
+                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+              />
+            </div>
+          )}
+          
           <p className="text-xs text-slate-400 mt-2">
             {launchType === 'edition'
               ? 'Number of copies that can be minted'
@@ -197,29 +237,21 @@ export default function NFTMetadataForm({ launchType, collection, onSubmit, onBa
 
         <div className="space-y-3">
           {formData.image_urls.map((url, index) => (
-            <div key={index} className="flex items-center space-x-3">
-              {url && (
-                <img
-                  src={url}
-                  alt={`NFT ${index + 1}`}
-                  className="w-16 h-16 rounded-lg object-cover border border-slate-700"
-                />
-              )}
-              <input
-                type="url"
-                required
+            <div key={index} className="space-y-2">
+              <MediaInput
                 value={url}
-                onChange={(e) => updateImageUrl(index, e.target.value)}
-                placeholder={`https://example.com/${launchType === 'edition' ? 'image' : `image-${index + 1}`}.jpg`}
-                className="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                onChange={(value) => updateImageUrl(index, value)}
+                placeholder={`Enter ${launchType === 'edition' ? 'image' : `image-${index + 1}`} URL or upload file`}
+                accept="image/*"
               />
               {launchType === 'drops' && formData.image_urls.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeImageUrl(index)}
-                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-sm transition-all"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
+                  <span>Remove Image</span>
                 </button>
               )}
             </div>

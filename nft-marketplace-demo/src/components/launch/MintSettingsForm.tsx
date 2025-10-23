@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Plus, X, AlertCircle, HelpCircle, Calendar, Clock } from 'lucide-react';
 import { MintSettings } from '../../pages/LaunchPage';
+import Dropdown from '../ui/Dropdown';
 
 interface MintSettingsFormProps {
   onSubmit: (settings: MintSettings) => void;
@@ -12,6 +13,7 @@ export default function MintSettingsForm({ onSubmit, onBack }: MintSettingsFormP
     price_sui: 10,
     start_time: '',
     duration_hours: 24,
+    duration_type: 'hours', // 'hours' or 'forever'
     mint_limit_per_address: 5,
     has_mint_limit: true,
     has_allowlist: false,
@@ -25,7 +27,7 @@ export default function MintSettingsForm({ onSubmit, onBack }: MintSettingsFormP
     const settings: MintSettings = {
       price_sui: formData.price_sui,
       start_time: formData.start_time,
-      duration_hours: formData.duration_hours,
+      duration_hours: formData.duration_type === 'forever' ? 0 : formData.duration_hours,
       mint_limit_per_address: formData.has_mint_limit ? formData.mint_limit_per_address : undefined,
       has_allowlist: formData.has_allowlist,
       allowlist_addresses: formData.has_allowlist
@@ -63,6 +65,20 @@ export default function MintSettingsForm({ onSubmit, onBack }: MintSettingsFormP
     mint_limit: 'Maximum number of NFTs each wallet address can mint. Leave empty for no limit.',
     allowlist: 'A whitelist of wallet addresses that can mint before or during the public sale.',
   };
+
+  const durationOptions = [
+    { value: 'forever', label: 'Forever', description: 'Mint never expires' },
+    { value: 'hours', label: 'Custom', description: 'Set specific duration' },
+  ];
+
+  const customDurationOptions = [
+    { value: 1, label: '1 Hour', description: 'Short duration mint' },
+    { value: 6, label: '6 Hours', description: 'Half day mint' },
+    { value: 24, label: '1 Day', description: 'Full day mint' },
+    { value: 72, label: '3 Days', description: 'Weekend mint' },
+    { value: 168, label: '1 Week', description: 'Week long mint' },
+    { value: 720, label: '1 Month', description: 'Extended mint' },
+  ];
 
   const Tooltip = ({ field, text }: { field: string; text: string }) => (
     <div className="relative inline-block">
@@ -153,17 +169,37 @@ export default function MintSettingsForm({ onSubmit, onBack }: MintSettingsFormP
           <div>
             <label className="block text-sm font-semibold text-white mb-2">
               <Clock className="w-4 h-4 inline mr-1" />
-              Duration (Hours) *
+              Mint Duration *
               <Tooltip field="duration" text={tooltips.duration} />
             </label>
-            <input
-              type="number"
-              required
-              min="1"
-              value={formData.duration_hours}
-              onChange={(e) => setFormData({ ...formData, duration_hours: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+            <Dropdown
+              value={formData.duration_type}
+              onChange={(value) => setFormData({ ...formData, duration_type: value as string })}
+              options={durationOptions}
+              className="mb-3"
             />
+            
+            {formData.duration_type === 'hours' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Custom Duration
+                </label>
+                <Dropdown
+                  value={formData.duration_hours}
+                  onChange={(value) => setFormData({ ...formData, duration_hours: value as number })}
+                  options={customDurationOptions}
+                  className="mb-2"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.duration_hours}
+                  onChange={(e) => setFormData({ ...formData, duration_hours: parseInt(e.target.value) || 1 })}
+                  placeholder="Enter custom hours"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                />
+              </div>
+            )}
           </div>
         </div>
 
