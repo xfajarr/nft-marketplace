@@ -79,7 +79,7 @@ export default function Navigation() {
           </div>
 
           <div className="hidden md:flex items-center space-x-3">
-            <Link
+            {/* <Link
               to="/launch"
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 ${
                 isActive("/launch")
@@ -89,10 +89,7 @@ export default function Navigation() {
             >
               <Rocket className="w-4 h-4 transition-transform duration-300 group-hover:rotate-45" />
               <span>Launch NFT</span>
-            </Link>
-            <button className="px-4 py-2 text-slate-300 hover:text-white font-medium transition-all duration-300 transform hover:scale-110 hover:text-cyan-400">
-              <Wallet className="w-5 h-5" />
-            </button>
+            </Link> */}
             <Link
               to="/profile"
               className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:-translate-y-0.5 ${

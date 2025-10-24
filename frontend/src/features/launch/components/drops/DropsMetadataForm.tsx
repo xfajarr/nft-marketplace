@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Plus, X, HelpCircle } from 'lucide-react';
 import { DropsCollection } from './DropsCollectionForm';
+import MediaInput from '../../../../components/ui/MediaInput';
 
 export interface NFTImage {
   name: string;
@@ -164,28 +165,12 @@ export default function DropsMetadataForm({ collection, onSubmit, onBack }: Drop
                 <label className="block text-sm font-semibold text-white mb-2">
                   Image URL *
                 </label>
-                <input
-                  type="url"
-                  required
+                <MediaInput
                   value={nftData.image_url}
-                  onChange={(e) => handleUpdateNFT('image_url', e.target.value)}
-                  placeholder="https://example.com/image.png"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all"
+                  onChange={(value) => handleUpdateNFT('image_url', value)}
+                  placeholder="Upload NFT image or paste IPFS URL"
                 />
               </div>
-
-              {nftData.image_url && (
-                <div className="md:col-span-2">
-                  <img
-                    src={nftData.image_url}
-                    alt={nftData.name || 'NFT Preview'}
-                    className="w-48 h-48 object-cover rounded-lg border border-slate-700"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
             </div>
 
             <div className="pt-4 border-t border-slate-700">

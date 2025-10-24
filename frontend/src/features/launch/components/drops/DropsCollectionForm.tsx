@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Info, HelpCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { useQueryDropsCollections } from '../../hooks/useQueryDropsCollections';
+import MediaInput from '../../../../components/ui/MediaInput';
 
 export interface DropsCollection {
   id?: string; // undefined if creating new
@@ -183,13 +184,10 @@ export default function DropsCollectionForm({ onSubmit, onBack }: DropsCollectio
               Thumbnail Image *
               <Tooltip field="thumbnail" text={tooltips.thumbnail} />
             </label>
-            <input
-              type="url"
-              required
+            <MediaInput
               value={formData.thumbnail_url}
-              onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-              placeholder="Enter thumbnail URL or upload file"
-              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500"
+              onChange={(value) => setFormData({ ...formData, thumbnail_url: value })}
+              placeholder="Upload thumbnail image or paste IPFS URL"
             />
             <p className="text-xs text-slate-400 mt-1">Recommended: 512x512px, PNG or JPG</p>
           </div>
@@ -199,12 +197,10 @@ export default function DropsCollectionForm({ onSubmit, onBack }: DropsCollectio
               Banner Image (Optional)
               <Tooltip field="banner" text={tooltips.banner} />
             </label>
-            <input
-              type="url"
+            <MediaInput
               value={formData.banner_url || ''}
-              onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
-              placeholder="Enter banner URL or upload file"
-              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500"
+              onChange={(value) => setFormData({ ...formData, banner_url: value })}
+              placeholder="Upload banner image or paste IPFS URL"
             />
             <p className="text-xs text-slate-400 mt-1">Recommended: 1400x400px, PNG or JPG</p>
           </div>

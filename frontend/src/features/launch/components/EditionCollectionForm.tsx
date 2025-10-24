@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Info } from 'lucide-react';
 import { useMutateCreateEditionCollection, CreateEditionCollectionParams } from '../hooks/useMutateCreateEditionCollection';
+import MediaInput from '../../../components/ui/MediaInput';
 
 interface EditionCollectionFormProps {
   onBack: () => void;
@@ -18,11 +19,6 @@ interface FormData {
   royalty_percentage: string;
 }
 
-interface NFTImage {
-  url: string;
-  file?: File;
-  status: 'loading' | 'loaded' | 'error';
-}
 
 export default function EditionCollectionForm({ onBack, onSuccess }: EditionCollectionFormProps) {
   const [formData, setFormData] = useState<FormData>({
@@ -37,12 +33,8 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
   });
 
   const [errors, setErrors] = useState<string | null>(null);
-  const [nftImages, setNftImages] = useState<NFTImage[]>([]);
-  const [bannerImage, setBannerImage] = useState<NFTImage | null>(null);
-  const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
-  const [bannerInputMode, setBannerInputMode] = useState<'url' | 'upload'>('url');
-  const [tempImageUrl, setTempImageUrl] = useState('');
-  const [tempBannerUrl, setTempBannerUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [bannerImageUrl, setBannerImageUrl] = useState('');
 
   const { mutate: createCollection, isPending, error } = useMutateCreateEditionCollection();
 
@@ -50,11 +42,16 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
     e.preventDefault();
     setErrors(null);
 
+    console.log('🚀 EditionCollectionForm: Starting form submission');
+    console.log('📝 Form data:', formData);
+    console.log('🖼️ Image URL:', imageUrl);
+    console.log('🎨 Banner URL:', bannerImageUrl);
+
     try {
       // Validate form data
       if (!formData.name.trim()) throw new Error('Collection name is required');
       if (!formData.description.trim()) throw new Error('Description is required');
-      if (nftImages.length === 0) throw new Error('At least one NFT image is required');
+      if (!imageUrl.trim()) throw new Error('NFT image is required');
       if (!formData.max_supply || parseInt(formData.max_supply) <= 0) {
         throw new Error('Max supply must be greater than 0');
       }
@@ -85,9 +82,9 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
       // Convert SUI to MIST (1 SUI = 10^9 MIST)
       const mintPriceMist = Math.floor(parseFloat(formData.mint_price) * 1_000_000_000);
 
-      // Use first NFT image as thumbnail
-      const thumbnailUrl = nftImages[0].url;
-      const bannerUrl = bannerImage?.url || null;
+      // Use the uploaded image URL
+      const thumbnailUrl = imageUrl;
+      const bannerUrl = bannerImageUrl || null;
 
       const params: CreateEditionCollectionParams = {
         name: formData.name.trim(),
@@ -102,15 +99,20 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
         royalty_bps: royaltyBps,
       };
 
+      console.log('✅ EditionCollectionForm: Validation passed, creating collection with params:', params);
+
       createCollection(params, {
         onSuccess: () => {
+          console.log('✅ EditionCollectionForm: Collection created successfully');
           onSuccess?.();
         },
         onError: (err) => {
+          console.error('❌ EditionCollectionForm: Collection creation failed:', err);
           setErrors(err.message);
         }
       });
     } catch (err) {
+      console.error('❌ EditionCollectionForm: Form validation error:', err);
       if (err instanceof Error) {
         setErrors(err.message);
       } else {
@@ -123,233 +125,6 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear errors when user starts typing
     if (errors) setErrors(null);
-  };
-
-  const handleImageUrlChange = (url: string) => {
-    setTempImageUrl(url);
-
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) {
-      setNftImages([]);
-      return;
-    }
-
-    // Check if URL is valid
-    try {
-      new URL(trimmedUrl);
-      // Add image with loading state and start timeout
-      setNftImages([{ url: trimmedUrl, status: 'loading' }]);
-
-      // Set timeout - if not loaded in 10 seconds, mark as error
-      const timeoutId = setTimeout(() => {
-        setNftImages(prev => {
-          if (prev.length > 0 && prev[0].status === 'loading') {
-            return [{ ...prev[0], status: 'error' }];
-          }
-          return prev;
-        });
-      }, 10000);
-
-      // Store timeout ID to clear later
-      (window as any).imageLoadTimeout = timeoutId;
-    } catch {
-      // Invalid URL format
-      setNftImages([{ url: trimmedUrl, status: 'error' }]);
-    }
-  };
-
-  const handleBannerUrlChange = (url: string) => {
-    setTempBannerUrl(url);
-
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) {
-      setBannerImage(null);
-      return;
-    }
-
-    // Check if URL is valid
-    try {
-      new URL(trimmedUrl);
-      setBannerImage({ url: trimmedUrl, status: 'loading' });
-
-      // Set timeout for banner too
-      const timeoutId = setTimeout(() => {
-        setBannerImage(prev => {
-          if (prev && prev.status === 'loading') {
-            return { ...prev, status: 'error' };
-          }
-          return prev;
-        });
-      }, 10000);
-
-      (window as any).bannerLoadTimeout = timeoutId;
-    } catch {
-      setBannerImage({ url: trimmedUrl, status: 'error' });
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setNftImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleImageLoad = (index: number) => {
-    // Clear timeout on successful load
-    if ((window as any).imageLoadTimeout) {
-      clearTimeout((window as any).imageLoadTimeout);
-    }
-    setNftImages(prev => prev.map((img, i) =>
-      i === index ? { ...img, status: 'loaded' as const } : img
-    ));
-  };
-
-  const handleImageError = (index: number) => {
-    // Clear timeout on error
-    if ((window as any).imageLoadTimeout) {
-      clearTimeout((window as any).imageLoadTimeout);
-    }
-    setNftImages(prev => prev.map((img, i) =>
-      i === index ? { ...img, status: 'error' as const } : img
-    ));
-  };
-
-  const handleBannerLoad = () => {
-    if ((window as any).bannerLoadTimeout) {
-      clearTimeout((window as any).bannerLoadTimeout);
-    }
-    if (bannerImage) {
-      setBannerImage({ ...bannerImage, status: 'loaded' });
-    }
-  };
-
-  const handleBannerError = () => {
-    if ((window as any).bannerLoadTimeout) {
-      clearTimeout((window as any).bannerLoadTimeout);
-    }
-    if (bannerImage) {
-      setBannerImage({ ...bannerImage, status: 'error' });
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0]; // Take first file only
-    const reader = new FileReader();
-
-    reader.onloadstart = () => {
-      setNftImages([{ url: '', file, status: 'loading' }]);
-    };
-
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setNftImages([{
-          url: event.target.result as string,
-          file,
-          status: 'loaded'
-        }]);
-      }
-    };
-
-    reader.onerror = () => {
-      setNftImages([{ url: '', file, status: 'error' }]);
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    const reader = new FileReader();
-
-    reader.onloadstart = () => {
-      setBannerImage({ url: '', file, status: 'loading' });
-    };
-
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setBannerImage({
-          url: event.target.result as string,
-          file,
-          status: 'loaded'
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      setBannerImage({ url: '', file, status: 'error' });
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
-
-    const file = files[0];
-    if (!file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-
-    reader.onloadstart = () => {
-      setNftImages([{ url: '', file, status: 'loading' }]);
-    };
-
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setNftImages([{
-          url: event.target.result as string,
-          file,
-          status: 'loaded'
-        }]);
-      }
-    };
-
-    reader.onerror = () => {
-      setNftImages([{ url: '', file, status: 'error' }]);
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const handleBannerDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
-
-    const file = files[0];
-    if (!file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-
-    reader.onloadstart = () => {
-      setBannerImage({ url: '', file, status: 'loading' });
-    };
-
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setBannerImage({
-          url: event.target.result as string,
-          file,
-          status: 'loaded'
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      setBannerImage({ url: '', file, status: 'error' });
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
   };
 
   return (
@@ -422,113 +197,11 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
             <Info className="w-4 h-4 text-slate-400" />
           </div>
 
-          {/* Tab Switcher */}
-          <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setImageInputMode('url')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                imageInputMode === 'url'
-                  ? 'bg-slate-700 text-cyan-400'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🔗 URL
-            </button>
-            <button
-              type="button"
-              onClick={() => setImageInputMode('upload')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                imageInputMode === 'upload'
-                  ? 'bg-slate-700 text-cyan-400'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              📤 Upload
-            </button>
-          </div>
-
-          {/* URL Input Mode */}
-          {imageInputMode === 'url' && (
-            <div>
-              <input
-                type="url"
-                value={tempImageUrl}
-                onChange={(e) => handleImageUrlChange(e.target.value)}
-                placeholder="Paste image URL here..."
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500"
-              />
-            </div>
-          )}
-
-          {/* Upload Mode */}
-          {imageInputMode === 'upload' && (
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-cyan-500/50 transition-all cursor-pointer"
-            >
-              <input
-                type="file"
-                id="nft-image-upload"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <label htmlFor="nft-image-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center space-y-3">
-                  <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">Drop image here or click to upload</p>
-                    <p className="text-sm text-slate-400 mt-1">PNG, JPG, GIF up to 10MB</p>
-                  </div>
-                </div>
-              </label>
-            </div>
-          )}
-
-          {/* Image Preview - Real-time */}
-          {nftImages.length > 0 && (
-            <div className="relative w-48 h-48 bg-slate-800 rounded-lg overflow-hidden border border-slate-700 mx-auto">
-              {nftImages[0].status === 'loading' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <p className="text-slate-400 text-xs">Loading...</p>
-                </div>
-              )}
-              {nftImages[0].status === 'error' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-500/10">
-                  <svg className="w-10 h-10 text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <p className="text-red-400 text-xs font-medium">Failed to load</p>
-                </div>
-              )}
-              {nftImages[0].url && (
-                <img
-                  src={nftImages[0].url}
-                  alt="NFT Preview"
-                  className="w-full h-full object-cover"
-                  onLoad={() => handleImageLoad(0)}
-                  onError={() => handleImageError(0)}
-                />
-              )}
-            </div>
-          )}
+          <MediaInput
+            value={imageUrl}
+            onChange={setImageUrl}
+            placeholder="Upload NFT image or paste IPFS URL"
+          />
         </div>
 
         {/* Banner Image */}
@@ -538,113 +211,11 @@ export default function EditionCollectionForm({ onBack, onSuccess }: EditionColl
             <Info className="w-4 h-4 text-slate-400" />
           </div>
 
-          {/* Tab Switcher */}
-          <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setBannerInputMode('url')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                bannerInputMode === 'url'
-                  ? 'bg-slate-700 text-cyan-400'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🔗 URL
-            </button>
-            <button
-              type="button"
-              onClick={() => setBannerInputMode('upload')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                bannerInputMode === 'upload'
-                  ? 'bg-slate-700 text-cyan-400'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              📤 Upload
-            </button>
-          </div>
-
-          {/* URL Input Mode */}
-          {bannerInputMode === 'url' && (
-            <div>
-              <input
-                type="url"
-                value={tempBannerUrl}
-                onChange={(e) => handleBannerUrlChange(e.target.value)}
-                placeholder="Paste banner image URL here..."
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500"
-              />
-            </div>
-          )}
-
-          {/* Upload Mode */}
-          {bannerInputMode === 'upload' && (
-            <div
-              onDrop={handleBannerDrop}
-              onDragOver={handleDragOver}
-              className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-cyan-500/50 transition-all cursor-pointer"
-            >
-              <input
-                type="file"
-                id="banner-image-upload"
-                accept="image/*"
-                onChange={handleBannerFileUpload}
-                className="hidden"
-              />
-              <label htmlFor="banner-image-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center space-y-3">
-                  <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">Drop banner here or click to upload</p>
-                    <p className="text-sm text-slate-400 mt-1">Recommended: 1500x500px, PNG or JPG</p>
-                  </div>
-                </div>
-              </label>
-            </div>
-          )}
-
-          {/* Banner Preview - Real-time */}
-          {bannerImage && (
-            <div className="relative w-full max-w-lg h-32 bg-slate-800 rounded-lg overflow-hidden border border-slate-700 mx-auto">
-              {bannerImage.status === 'loading' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <p className="text-slate-400 text-xs">Loading...</p>
-                </div>
-              )}
-              {bannerImage.status === 'error' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-500/10">
-                  <svg className="w-10 h-10 text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  <p className="text-red-400 text-xs font-medium">Failed to load</p>
-                </div>
-              )}
-              {bannerImage.url && (
-                <img
-                  src={bannerImage.url}
-                  alt="Banner Preview"
-                  className="w-full h-full object-cover"
-                  onLoad={handleBannerLoad}
-                  onError={handleBannerError}
-                />
-              )}
-            </div>
-          )}
+          <MediaInput
+            value={bannerImageUrl}
+            onChange={setBannerImageUrl}
+            placeholder="Upload banner image or paste IPFS URL"
+          />
         </div>
 
         {/* Supply & Pricing */}

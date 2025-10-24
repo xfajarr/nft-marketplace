@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, Link, X, Image, Loader2 } from 'lucide-react';
+import { uploadFileToPinata, validateFileForUpload } from '../../services/pinata';
 
 interface MediaInputProps {
   value: string;
@@ -7,6 +8,9 @@ interface MediaInputProps {
   placeholder?: string;
   accept?: string;
   className?: string;
+  onUploadStart?: () => void;
+  onUploadComplete?: (gatewayUrl: string) => void;
+  onUploadError?: (error: string) => void;
 }
 
 export default function MediaInput({
@@ -15,28 +19,73 @@ export default function MediaInput({
   placeholder = 'Enter image URL or upload file',
   accept = 'image/*',
   className = '',
+  onUploadStart,
+  onUploadComplete,
+  onUploadError,
 }: MediaInputProps) {
   const [inputMode, setInputMode] = useState<'url' | 'file'>('url');
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState<boolean | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (file: File) => {
+  const handleFileChange = async (file: File) => {
+    console.log('📁 MediaInput: File selected:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
+    });
+
     if (file && file.type.startsWith('image/')) {
-      setIsLoading(true);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        onChange(result);
-        setIsLoading(false);
+      try {
+        // Validate file
+        validateFileForUpload(file);
+        
+        setIsLoading(true);
+        setUploadProgress('Validating file...');
+        onUploadStart?.();
+        
+        console.log('⬆️ MediaInput: Starting upload to Pinata...');
+        
+        // Upload to Pinata
+        setUploadProgress('Uploading to IPFS...');
+        const uploadResult = await uploadFileToPinata(file);
+        
+        console.log('✅ MediaInput: Upload successful!', {
+          cid: uploadResult.cid,
+          gatewayUrl: uploadResult.gatewayUrl
+        });
+        
+        // Update with gateway URL
+        onChange(uploadResult.gatewayUrl);
         setIsValidUrl(true);
-      };
-      reader.onerror = () => {
-        setIsLoading(false);
+        setUploadProgress('Upload complete!');
+        
+        onUploadComplete?.(uploadResult.gatewayUrl);
+        
+        // Clear progress message after a delay
+        setTimeout(() => setUploadProgress(''), 2000);
+        
+      } catch (error) {
+        console.error('❌ MediaInput: Upload failed:', {
+          error: error instanceof Error ? error.message : String(error),
+          fileName: file.name,
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        
+        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+        setUploadProgress(`Error: ${errorMessage}`);
         setIsValidUrl(false);
-      };
-      reader.readAsDataURL(file);
+        onUploadError?.(errorMessage);
+        
+        // Clear error message after a delay
+        setTimeout(() => setUploadProgress(''), 3000);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      console.warn('⚠️ MediaInput: Invalid file type:', file.type);
     }
   };
 
@@ -48,18 +97,23 @@ export default function MediaInput({
   };
 
   const handleUrlChange = (url: string) => {
+    console.log('🔗 MediaInput: URL changed:', url);
     onChange(url);
     if (url.trim()) {
       setIsLoading(true);
       setIsValidUrl(null);
       
+      console.log('🔍 MediaInput: Validating URL:', url);
+      
       // Check if URL is valid by testing if it loads
       const img = document.createElement('img');
       img.onload = () => {
+        console.log('✅ MediaInput: URL validation successful');
         setIsLoading(false);
         setIsValidUrl(true);
       };
       img.onerror = () => {
+        console.error('❌ MediaInput: URL validation failed');
         setIsLoading(false);
         setIsValidUrl(false);
       };
@@ -181,8 +235,8 @@ export default function MediaInput({
                 <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
               </div>
               <div>
-                <p className="text-white font-medium">Processing image...</p>
-                <p className="text-slate-400 text-sm mt-1">Please wait</p>
+                <p className="text-white font-medium">Uploading to IPFS...</p>
+                <p className="text-slate-400 text-sm mt-1">{uploadProgress || 'Please wait'}</p>
               </div>
             </div>
           ) : (
@@ -198,7 +252,7 @@ export default function MediaInput({
                 <p className="text-white font-medium transition-all duration-300">
                   {isDragging ? 'Drop image here' : 'Drop image here or click to upload'}
                 </p>
-                <p className="text-slate-400 text-sm mt-1">PNG, JPG, GIF up to 10MB</p>
+                <p className="text-slate-400 text-sm mt-1">PNG, JPG, GIF, WebP up to 10MB</p>
               </div>
             </div>
           )}
@@ -207,13 +261,14 @@ export default function MediaInput({
 
       {value && (
         <div className="relative mt-3 animate-fadeIn">
-          <div className="flex items-center space-x-3 p-3 bg-slate-900/50 border border-slate-700 rounded-lg hover:bg-slate-900/70 transition-all duration-300 group">
-            <div className={`w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-300 ${
+          <div className="relative group">
+            <div className={`w-full h-64 rounded-lg overflow-hidden transition-all duration-300 ${
               isValidUrl === false ? 'ring-2 ring-red-500/50' : ''
             }`}>
               {isLoading ? (
-                <div className="w-full h-full bg-slate-700 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+                <div className="w-full h-full bg-slate-700 flex flex-col items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-2" />
+                  <p className="text-slate-400 text-sm">Loading...</p>
                 </div>
               ) : (
                 <img
@@ -229,32 +284,16 @@ export default function MediaInput({
                 />
               )}
               {isValidUrl === false && (
-                <div className="w-full h-full bg-red-900/20 flex items-center justify-center">
-                  <Image className="w-6 h-6 text-red-400" />
+                <div className="w-full h-full bg-red-900/20 flex flex-col items-center justify-center">
+                  <Image className="w-12 h-12 text-red-400 mb-2" />
+                  <p className="text-red-400 text-sm">Failed to load image</p>
                 </div>
               )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm truncate">{value}</p>
-              <p className={`text-xs transition-all duration-300 ${
-                isValidUrl === false
-                  ? 'text-red-400'
-                  : isValidUrl === true
-                    ? 'text-green-400'
-                    : 'text-slate-400'
-              }`}>
-                {isValidUrl === false
-                  ? 'Invalid image URL'
-                  : isValidUrl === true
-                    ? 'Image loaded successfully'
-                    : 'Image preview'
-                }
-              </p>
             </div>
             <button
               type="button"
               onClick={clearValue}
-              className="p-1 text-slate-400 hover:text-red-400 transition-all duration-300 transform hover:scale-110"
+              className="absolute top-3 right-3 p-2 bg-slate-900/80 backdrop-blur-sm rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-900/90 transition-all duration-300 transform hover:scale-110"
             >
               <X className="w-4 h-4" />
             </button>

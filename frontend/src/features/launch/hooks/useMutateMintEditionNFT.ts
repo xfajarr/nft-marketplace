@@ -8,24 +8,17 @@ import { useMutation } from "@tanstack/react-query";
 import { PACKAGE_ID } from "../../../constants";
 
 /**
- * Input parameters for minting a Drops NFT
+ * Input parameters for minting an Edition NFT
  */
-export interface MintDropsNFTParams {
+export interface MintEditionNFTParams {
   collectionId: string;
-  name: string;
-  description: string;
-  image_url: string;
-  attributes?: Array<{
-    trait_type: string;
-    value: string;
-  }>;
   mint_price: number; // in MIST (1 SUI = 10^9 MIST)
 }
 
 /**
  * Response from the transaction
  */
-export interface MintDropsNFTResponse {
+export interface MintEditionNFTResponse {
   digest: string;
   nftId?: string;
   effects?: {
@@ -37,19 +30,19 @@ export interface MintDropsNFTResponse {
 }
 
 /**
- * Hook to mint a Drops NFT on Sui blockchain
+ * Hook to mint an Edition NFT on Sui blockchain
  */
-export function useMutateMintDropsNFT() {
+export function useMutateMintEditionNFT() {
   const currentAccount = useCurrentAccount();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const suiClient = useSuiClient();
 
   return useMutation<
-    MintDropsNFTResponse,
+    MintEditionNFTResponse,
     Error,
-    MintDropsNFTParams
+    MintEditionNFTParams
   >({
-    mutationFn: async (params: MintDropsNFTParams) => {
+    mutationFn: async (params: MintEditionNFTParams) => {
       if (!currentAccount?.address) {
         throw new Error("Wallet not connected. Please connect your wallet first.");
       }
@@ -59,12 +52,9 @@ export function useMutateMintDropsNFT() {
         const tx = new Transaction();
 
         tx.moveCall({
-          target: `${PACKAGE_ID}::drops_collection::mint_nft`,
+          target: `${PACKAGE_ID}::edition_collection::mint_edition`,
           arguments: [
             tx.object(params.collectionId), // Collection object
-            tx.pure.string(params.name), // NFT name
-            tx.pure.string(params.description), // NFT description
-            tx.pure.string(params.image_url), // Image URL
             tx.pure.u64(params.mint_price), // Payment amount
             tx.object("0x6"), // Clock object (testnet)
           ],
@@ -115,18 +105,18 @@ export function useMutateMintDropsNFT() {
           events: transactionResult.events || [],
         };
       } catch (error) {
-        console.error("Error in mintDropsNFT:", error);
+        console.error("Error in mintEditionNFT:", error);
         throw error;
       }
     },
     onSuccess: (data) => {
-      console.log("✅ Drops NFT minted successfully!");
+      console.log("✅ Edition NFT minted successfully!");
       console.log("Transaction digest:", data.digest);
       console.log("NFT ID:", data.nftId);
       console.log("Events:", data.events);
     },
     onError: (error) => {
-      console.error("❌ Error minting drops NFT:", error);
+      console.error("❌ Error minting edition NFT:", error);
       console.error("Error message:", error.message);
     },
   });

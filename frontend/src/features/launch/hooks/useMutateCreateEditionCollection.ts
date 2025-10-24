@@ -33,7 +33,7 @@ export interface CreateEditionCollectionResponse {
       status: string;
     };
   };
-  events?: any[];
+  events?: unknown[];
 }
 
 /**
@@ -68,6 +68,10 @@ export function useMutateCreateEditionCollection() {
     CreateEditionCollectionParams
   >({
     mutationFn: async (params: CreateEditionCollectionParams) => {
+      console.log('🚀 useMutateCreateEditionCollection: Starting collection creation');
+      console.log('📝 Parameters:', params);
+      console.log('👛 Current account:', currentAccount?.address);
+
       if (!currentAccount?.address) {
         throw new Error("Wallet not connected. Please connect your wallet first.");
       }
@@ -92,8 +96,10 @@ export function useMutateCreateEditionCollection() {
         throw new Error("Mint limit per wallet must be greater than 0");
       }
 
+      console.log('🔧 Creating transaction...');
       const tx = new Transaction();
 
+      console.log('📦 Adding move call to transaction...');
       tx.moveCall({
         target: `${PACKAGE_ID}::edition_collection::create_collection`,
         arguments: [
@@ -112,9 +118,13 @@ export function useMutateCreateEditionCollection() {
         ],
       });
 
+      console.log('📤 Signing and executing transaction...');
       const result = await signAndExecute({
         transaction: tx,
       });
+
+      console.log('⏳ Waiting for transaction confirmation...');
+      console.log('🔍 Transaction digest:', result.digest);
 
       const transactionResult = await suiClient.waitForTransaction({
         digest: result.digest,
@@ -125,10 +135,13 @@ export function useMutateCreateEditionCollection() {
         },
       });
 
+      console.log('📊 Transaction result:', transactionResult);
+
       if (
         !transactionResult.effects?.status ||
         transactionResult.effects.status.status !== "success"
       ) {
+        console.error('❌ Transaction failed:', transactionResult.effects?.status?.error);
         throw new Error(
           `Transaction failed on-chain: ${
             transactionResult.effects?.status?.error || "Unknown error"
@@ -136,20 +149,22 @@ export function useMutateCreateEditionCollection() {
         );
       }
 
+      console.log('✅ Transaction successful!');
       return {
         digest: result.digest,
         effects: transactionResult.effects,
-        events: transactionResult.events,
+        events: transactionResult.events || [],
       };
     },
     onSuccess: (data) => {
-      console.log("✅ Collection created successfully!");
-      console.log("Transaction digest:", data.digest);
-      console.log("Events:", data.events);
+      console.log("✅ useMutateCreateEditionCollection: Collection created successfully!");
+      console.log("🔍 Transaction digest:", data.digest);
+      console.log("📋 Events:", data.events);
     },
     onError: (error) => {
-      console.error("❌ Error creating collection:", error);
-      console.error("Error message:", error.message);
+      console.error("❌ useMutateCreateEditionCollection: Error creating collection:", error);
+      console.error("💬 Error message:", error.message);
+      console.error("📚 Error stack:", error.stack);
     },
   });
 }
